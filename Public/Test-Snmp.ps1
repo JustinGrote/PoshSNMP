@@ -83,6 +83,7 @@ function Test-Snmp {
             }
             catch {
                 $SNMPTestResultProps.SNMPGet = $_.Exception.Message
+                $SNMPTestResultProps.ResultSNMPGet = $false
             }
             
             #Optional Microsoft Tests. Only run if SNMP Get Failed to save time.
@@ -100,6 +101,8 @@ function Test-Snmp {
                     return [PSCustomObject]$SNMPTestResultProps
                 }
 
+                #Test WMI by fetching the Computer Model
+
                 #Registry Access Test
                 try {
                     Write-VerboseProgress -Activity "Test-Snmp" -status "$Computer" -CurrentOperation "Attempting Registry Connection"
@@ -113,6 +116,7 @@ function Test-Snmp {
                     $SNMPTestResultProps.Registry = $_.Exception.Message
                     return [PSCustomObject]$SNMPTestResultProps
                 }
+
             }
             
             #Return Full results if it worked
