@@ -1,64 +1,59 @@
 function Invoke-SnmpSet {
 	<#
 	.SYNOPSIS
-	Performs an SNMP SET query against the target device.
+	Performs an SNMPv2 SET query against the target device.
 	.DESCRIPTION
 	This cmdlet uses the SharpSNMP library to perform direct SNMP SET queries against the target device and OID using the provided community string.
 	.EXAMPLE
-	Invoke-SnmpSet 10.10.35.40 publ1c 1.3.6.1.2.1.1.3.0 123456 "i"
+	Invoke-SnmpSet -ComputerName 10.10.35.40 -Community publ1c -ObjectIdentifier 1.3.6.1.2.1.1.3.0 -OIDValue 123456 -DataType "i"
 	.EXAMPLE
-	Invoke-SnmpSet -TargetDevice 10.10.35.40 -CommunityString publ1c -ObjectIdentifier 1.3.6.1.2.1.1.3.0 -OIDValue 123456 -DataType "i"
-	.PARAMETER TargetDevice
-	The IP or hostname of the target device.
-	.PARAMETER CommunityString
-	SNMP community string to use to query the target device.
-	.PARAMETER ObjectIdentifier
-	SNMP OID to query on the target device. For Invoke-SnmpSet, this can only be a single OID (string value). Until I maybe fix it someday
-	.PARAMETER OIDValue
-	The value to set the provided OID to.
-	.PARAMETER DataType
-	Data type of the provided value. Valid values:
-		i: INTEGER
-		u: unsigned INTEGER
-		t: TIMETICKS
-		a: IPADDRESS
-		o: OBJID
-		s: STRING
-		x: HEX STRING
-		d: DECIMAL STRING
-		n: NULL VALUE
-	.PARAMETER UDPport
-	UDP Port to use to perform SNMP queries.
-	.PARAMETER Timeout
-	Time in milliseconds to wait before expiring SNMP call handles. For unlimited timeout, provide 0 or -1.
+	Invoke-SnmpSet 10.10.35.40 publ1c 1.3.6.1.2.1.1.3.0 123456 "i"
 	#>
 	
 	Param (
-		[Parameter(Mandatory=$True,Position=1)]
-			[string]$TargetDevice,
-			
-        [Parameter(Mandatory=$true,Position=2)]
-			[string]$CommunityString = "public",
-			
-		[Parameter(Mandatory=$True,Position=3)]
-			[string]$ObjectIdentifier,
-			
+        #The IP or hostname of the target device. Defaults to "localhost" if not specified
+	    [string]$ComputerName = "localhost",
+
+		#SNMP community string to use to query the target device. Defaults to "public" if not specified
+        [string]$Community = "public",
+
+		#SNMP OID(s) to query on the target device. For Invoke-SnmpGet, this can be a single OID (string value) or an array of OIDs (string values)
+        [Parameter(Mandatory=$True)]
+	    [string[]]$ObjectIdentifier,
+        
+        #The value to set the provided OID to.
 		[Parameter(Mandatory=$True,Position=4)]
 			$OIDValue,
-			
+		
+        <# Data type of the provided value. Valid values:
+            i: INTEGER
+            u: unsigned INTEGER
+            t: TIMETICKS
+            a: IPADDRESS
+            o: OBJID
+            s: STRING
+            x: HEX STRING
+            d: DECIMAL STRING
+            n: NULL VALUE 
+        #>
 		[Parameter(Mandatory=$True,Position=5)]
 			[ValidateSet("i","u","t","a","o","s","x","d","n")]
 			[string]$DataType,
 			
+        #UDP Port to use to perform SNMP queries.
 		[Parameter(Mandatory=$False)]
 			[int]$UDPport = 161,
-			
+		
+        #Time to wait before expiring SNMP call handles.	
         [Parameter(Mandatory=$False)]
 			[int]$Timeout = 3000
 	)
+
+    #Validate the ComputerName
+    $IPAddress = try {[System.Net.Dns]::GetHostAddresses($ComputerName)[0]} catch {throw}
 	
 	# Create endpoint for SNMP server
-	$TargetIPEndPoint = New-Object System.Net.IpEndPoint ($(HelperValidateOrResolveIP $TargetDevice), $UDPport)
+	$TargetIPEndPoint = New-Object System.Net.IpEndPoint ($IPAddress, $UDPport)
 
 	# Create a generic list to be the payload
 	$DataPayload = HelperCreateGenericList
@@ -98,7 +93,7 @@ function Invoke-SnmpSet {
 
 	# Perform SNMP Get
 	try {
-		$ReturnedSet = [Lextm.SharpSnmpLib.Messaging.Messenger]::Set($SnmpVersion, $TargetIPEndPoint, $CommunityString, $DataPayload, $Timeout)
+		$ReturnedSet = [Lextm.SharpSnmpLib.Messaging.Messenger]::Set($SnmpVersion, $TargetIPEndPoint, $Community, $DataPayload, $Timeout)
 	} catch {
 	
 		# can we handle this more gracefully?

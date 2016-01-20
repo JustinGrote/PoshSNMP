@@ -1,42 +1,43 @@
 function Invoke-SnmpGet {
 	<#
 	.SYNOPSIS
-	Performs an SNMP GET query against the target device.
+	Performs an SNMPv2 GET query against the target device.
 	.DESCRIPTION
-	This cmdlet uses the SharpSNMP library to perform direct SNMP GET queries against the target device and OID using the provided community string.
+	This cmdlet uses the SharpSNMP library to perform direct SNMP GET queries against the target device and OID using the provided community string. It is configured with sensible defaults. This will test against the local computer by default, so specify a remote host with ComputerName if you wish.
 	.EXAMPLE
-	Invoke-SnmpGet 10.10.35.40 publ1c 1.3.6.1.2.1.1.3.0
-	.PARAMETER TargetDevice
-	The IP or hostname of the target device.
-	.PARAMETER CommunityString
-	SNMP community string to use to query the target device.
-	.PARAMETER ObjectIdentifiers
-	SNMP OID(s) to query on the target device. For Invoke-SnmpGet, this can be a single OID (string value) or an array of OIDs (string values).
-	.PARAMETER UDPport
-	UDP Port to use to perform SNMP queries.
-	.PARAMETER Timeout
-	Time to wait before expiring SNMP call handles.
+	Invoke-SnmpGet -ComputerName demo.snmplabs.com -Community public -ObjectIdentifier 1.3.6.1.2.1.1.3.0	
+	.EXAMPLE
+	Invoke-SnmpGet demo.snmplabs.com public 1.3.6.1.2.1.1.3.0	
+    .EXAMPLE
+    Invoke-SnmpGet -ObjectIdentifier 1.3.6.1.2.1.1.3.0
+    Queries the system uptime on the local computer using defaults
 	#>
 	
 	Param (
-		[Parameter(Mandatory=$True,Position=1)]
-			[string]$TargetDevice,
-			
-        [Parameter(Mandatory=$true,Position=2)]
-			[string]$CommunityString = "public",
-			
-		[Parameter(Mandatory=$True,Position=3)]
-			$ObjectIdentifiers,
-			
+        #The IP or DNS Hostname of the target device. Defaults to "localhost" if not specified
+	    [string]$ComputerName = "localhost",
+
+		#SNMP community string to use to query the target device. Defaults to "public" if not specified
+        [string]$Community = "public",
+
+		#SNMP OID(s) to query on the target device. For Invoke-SnmpGet, this can be a single OID (string value) or an array of OIDs (string values)
+        [Parameter(Mandatory=$True)]
+	    [string[]]$ObjectIdentifier,
+	
+        #UDP Port to use to perform SNMP queries.
 		[Parameter(Mandatory=$False)]
 			[int]$UDPport = 161,
-			
+		
+        #Time to wait before expiring SNMP call handles.	
         [Parameter(Mandatory=$False)]
 			[int]$Timeout = 3000
 	)
 		
-	# Create endpoint for SNMP server
-	$TargetIPEndPoint = New-Object System.Net.IpEndPoint ($(HelperValidateOrResolveIP $TargetDevice), $UDPport)
+    #Validate the ComputerName
+    $IPAddress = try {[System.Net.Dns]::GetHostAddresses($ComputerName)[0]} catch {throw}
+
+    # Create endpoint for SNMP server
+	$TargetIPEndPoint = New-Object System.Net.IpEndPoint ($IPAddress, $UDPport)
 
 	# Create a generic list to be the payload
 	if ($Host.Version.Major -le 2) {
@@ -51,7 +52,7 @@ function Invoke-SnmpGet {
 	# WHY DOESN'T THIS WORK?! this should replace the lines above; what is different?
 	
 	# Convert each OID to the proper object type and add to the list
-	foreach ($OIDString in $ObjectIdentifiers) {
+	foreach ($OIDString in $ObjectIdentifier) {
 		$OIDObject = New-Object Lextm.SharpSnmpLib.ObjectIdentifier ($OIDString)
 		$DataPayload.Add($OIDObject)
 	}
@@ -61,9 +62,9 @@ function Invoke-SnmpGet {
 
 	# Perform SNMP Get
 	try {
-		$ReturnedSet = [Lextm.SharpSnmpLib.Messaging.Messenger]::Get($SnmpVersion, $TargetIPEndPoint, $CommunityString, $DataPayload, $Timeout)
+		$ReturnedSet = [Lextm.SharpSnmpLib.Messaging.Messenger]::Get($SnmpVersion, $TargetIPEndPoint, $Community, $DataPayload, $Timeout)
 	} catch [Lextm.SharpSnmpLib.Messaging.TimeoutException] {
-		throw "SNMP Get on $TargetDevice timed-out"
+		throw "SNMP Get on $ComputerName timed-out"
 	} catch {
 		throw "SNMP Get error: $_"
 	}
