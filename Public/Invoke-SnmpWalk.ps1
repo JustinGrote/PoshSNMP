@@ -35,7 +35,7 @@ function Invoke-SnmpWalk  {
 	}
 
     #Validate the ComputerName
-    $IPAddress = try {[System.Net.Dns]::GetHostAddresses($ComputerName)[0]} catch {throw}
+    $ip = try {[System.Net.Dns]::GetHostAddresses($ComputerName)[0]} catch {throw}
 	
 	# Create endpoint for SNMP server
 	$svr = New-Object System.Net.IpEndPoint ($IPAddress, $UDPport)
@@ -48,10 +48,10 @@ function Invoke-SnmpWalk  {
 	try {
 		[Lextm.SharpSnmpLib.Messaging.Messenger]::Walk($ver, $svr, $Community, $oid, $vList, $TimeOut, $walkMode) | Out-Null
 	} catch [Lextm.SharpSnmpLib.Messaging.TimeoutException] {
-		write-error "SNMP Get on $ComputerName timed-out"
+		Write-Host "SNMP Get on $ComputerName timed-out"
 		Return $null
 	} catch {
-		write-error "SNMP Walk error: $_"
+		Write-Host "SNMP Walk error: $_"
 		Return $null
 	}
 

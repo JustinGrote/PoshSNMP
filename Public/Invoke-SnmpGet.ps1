@@ -64,11 +64,9 @@ function Invoke-SnmpGet {
 	try {
 		$ReturnedSet = [Lextm.SharpSnmpLib.Messaging.Messenger]::Get($SnmpVersion, $TargetIPEndPoint, $Community, $DataPayload, $Timeout)
 	} catch [Lextm.SharpSnmpLib.Messaging.TimeoutException] {
-		write-error "SNMP Get on $ComputerName timed-out"
-        return $null
+		throw "SNMP Get on $ComputerName timed-out"
 	} catch {
-		write-error "SNMP Get error: $_"
-        return $null
+		throw "SNMP Get error: $_"
 	}
 
 	# clean up return data
