@@ -41,6 +41,7 @@ function Test-Snmp {
 
     process {
         foreach ($Computer in $ComputerName) {
+            Write-VerboseProgress -Activity "Test-Snmp" -status "$Computer" -CurrentOperation "Initializing Scan"
             #Create Array for Test Results and initialize all test variables for consistent objects
             $SNMPTestResultProps = [ordered]@{}
             $SNMPTestResultProps.ComputerName = $Computer
@@ -56,6 +57,8 @@ function Test-Snmp {
 
             #Ping to see if system is online. Stop here if it isn't.
             if (!$NoPing) {
+                Write-VerboseProgress -Activity "Test-Snmp" -status "$Computer" -CurrentOperation "Pinging $Computer"
+
                 try {
                     $SNMPTestResultProps.Ping = test-connection $Computer -count 2 -quiet -ErrorAction stop
                     if (!$SNMPTestResultProps.Ping) {throw "FAILED"}
@@ -68,7 +71,10 @@ function Test-Snmp {
 
             #Check if we can get the OID (SNMP system uptime by default and all systems should support this, so this not working is considered a failure)
             try {
-                $ResultSNMPGet = (Invoke-SnmpGet -ComputerName $Computer -Community $Community -ObjectIdentifier $ObjectIdentifier -UDPport $UDPPort -ErrorAction Stop).data
+                Write-VerboseProgress -Activity "Test-Snmp" -status "$Computer" -CurrentOperation "Performing SNMPv2 Get Test to port $UDPPort for $ObjectIdentifier using community $Community"
+                $ResultSNMPGetRaw = Invoke-SnmpGet -ComputerName $Computer -Community $Community -ObjectIdentifier $ObjectIdentifier -UDPport $UDPPort -ErrorAction Stop
+                $ResultSNMPGet = $ResultSNMPGetRaw.data
+
                 if ($ResultSNMPGet -match "NoSuchInstance") {throw "OID Wasn't found on System"}
                 if (!$ResultSNMPGet) {throw "No Data Returned"}
 
@@ -76,7 +82,7 @@ function Test-Snmp {
                 $SNMPTestResultProps.ResultSNMPGet = $ResultSNMPGet
             }
             catch {
-                $SNMPTestResultProps.SNMPGet = $Error[0].Exception.Message
+                $SNMPTestResultProps.SNMPGet = $_.Exception.Message
             }
             
             #Optional Microsoft Tests. Only run if SNMP Get Failed to save time.
@@ -84,17 +90,19 @@ function Test-Snmp {
 
                 #RPC Port Test. Registry test has a long timeout that's not easily configurable, this is a fast way to avoid that.
                 try {
+                    Write-VerboseProgress -Activity "Test-Snmp" -status "$Computer" -CurrentOperation "Testing RPC Port"
                     #Uses Private Function Test-TCPPort as it's faster, cannot rely on test-netconnection as it's too new still.
-                    $SNMPTestResultProps.RPCPort = Test-TCPPort -port $UDPPort -srv $Computer -InformationLevel Quiet
+                    $SNMPTestResultProps.RPCPort = Test-TCPPort -srv $Computer -InformationLevel Quiet
                     if (!$SNMPTestResultProps.RPCPort) {throw "FAILED"}
                 }
                 catch {
-                    $SNMPTestResultProps.RPCPort = $Error[0].Exception.Message
+                    $SNMPTestResultProps.RPCPort = $_.Exception.Message
                     return [PSCustomObject]$SNMPTestResultProps
                 }
 
                 #Registry Access Test
                 try {
+                    Write-VerboseProgress -Activity "Test-Snmp" -status "$Computer" -CurrentOperation "Attempting Registry Connection"
                     $ErrorActionPreference = "Stop"
                     $RemoteRegistry = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey("LocalMachine",$Computer)
                     $ErrorActionPreference = "Continue"
@@ -102,7 +110,7 @@ function Test-Snmp {
                     if (!$SNMPTestResultProps.Registry) {throw "FAILED"}
                 }
                 catch {
-                    $SNMPTestResultProps.Registry = $Error[0].Exception.Message
+                    $SNMPTestResultProps.Registry = $_.Exception.Message
                     return [PSCustomObject]$SNMPTestResultProps
                 }
             }
