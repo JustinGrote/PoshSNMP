@@ -97,7 +97,7 @@ function Invoke-SnmpSet {
 	} catch {
 	
 		# can we handle this more gracefully?
-		Write-Host "SNMP Set error: $_"
+		Write-Error "SNMP Set error: $_"
 		Return $null
 	}
 
