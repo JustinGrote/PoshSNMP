@@ -56,12 +56,6 @@ function Invoke-SnmpSet {
         [Parameter(Mandatory=$False)]
 			[int]$Timeout = 3000
 	)
-
-
-	if (![Reflection.Assembly]::LoadWithPartialName("SharpSnmpLib")) {
-		Write-Error "Missing Lextm.SharpSnmpLib Assembly; is it installed?"
-		return
-	}
 	
 	# Create endpoint for SNMP server
 	$TargetIPEndPoint = New-Object System.Net.IpEndPoint ($(HelperValidateOrResolveIP $TargetDevice), $UDPport)
