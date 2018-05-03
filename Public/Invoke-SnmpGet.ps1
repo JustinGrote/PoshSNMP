@@ -32,7 +32,10 @@ function Invoke-SnmpGet {
 
         #Time to wait before expiring SNMP call handles.
         [Parameter(Mandatory=$False)]
-			[int]$Timeout = 3000
+			[int]$Timeout = 3000,
+
+		#Resolve SNMP OID names using Resolve-SNMPObjectIdentifier
+		[Switch]$Resolve
 	)
 
     #Validate the ComputerName
@@ -59,7 +62,7 @@ function Invoke-SnmpGet {
 		$DataPayload.Add($OIDObject)
 	}
 
-	# Use SNMP 
+	# Use SNMP v2 by default
 	$SnmpVersion = [Lextm.SharpSnmpLib.VersionCode]::$Version
 
 	# Perform SNMP Get

@@ -17,6 +17,7 @@ function Resolve-SnmpObjectIdentifier {
         )
         begin {
             [uri]$oidinfouri = 'http://www.oid-info.com/get'
+            [regex]$oidParentRegex = '(?<oidparent>.*)(?<oidchild>\.\d+?)$'
             [regex]$oidDescriptionRegex = '<strong><code>(?<oidname>\w+?)\((?<oidnum>\d+?)\)</code></strong>'
             if (test-path $CacheFilePath) {
                 $OIDCache = import-clixml $CacheFilePath
@@ -28,6 +29,12 @@ function Resolve-SnmpObjectIdentifier {
         process { foreach ($OIDItem in $objectIdentifier) {
             #Strip any leading dot notation
             $OIDItem = $OIDItem -replace '^\.',''
+
+            #Determine the OID parent
+            $oidParentregexResult = $oidparentregex.match($oidItem)
+            $oidParent = $oidParentregexResult.groups["oidparent"]
+            $oidChild = $oidParentregexResult.groups["oidchild"]
+
             $iwrParams = @{
                 #Appear to be google chrome browser
                 UserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36'
@@ -39,22 +46,57 @@ function Resolve-SnmpObjectIdentifier {
             if ($OIDCachedResult) {
                 return $OIDCachedResult
             } else {
-                #The write-progress in invoke-webrequest slows it down significantly
-                $progressPreference = "silentlycontinue"
-                $result = (invoke-webrequest @iwrParams -uri "$oidinfouri/$OIDItem").content -replace '\n'
-                $progressPreference = "continue"
-                $oidScrapeResult = $oidDescriptionRegex.match($result)
-                if ($oidScrapeResult.success) {
-                    $newOIDResult = ($oidScrapeResult.groups | where name -eq oidname).value
+                #try the OID parent if not found
+                $oidCachedResult = $oidCache."$oidParent"
+                if ($oidCache."$oidParent") {
+                    write-verbose "Could not find $oidItem but found its parent OID."
+                    return ($oidCachedResult + $oidchild)
+                }
+            } 
+            
+            write-verbose "$oidItem or its parent not found in cache. Checking oid-info.com"
+            #The write-progress in invoke-webrequest slows it down significantly
+            $progressPreference = "silentlycontinue"
+            #Invoke-webrequest doesn't throw a terminating error even if you set erroraction stop
+            $erroractionpreference = "stop"
+            try {
+                $result = (invoke-webrequest @iwrParams -uri "$oidinfouri/$OIDItem" -erroraction stop).content -replace '\n'
+            } catch {
+                #Try the parent OID if its not available
+                try {
+                    $result = (invoke-webrequest @iwrParams -uri "$oidinfouri/$OIDParent" -erroraction stop).content -replace '\n'
+                } catch {write-verbose "OID parent not found either"}
+                
+                if ($result) {
+                    [switch]$OIDParentUsed = $true
                 } else {
                     write-error "Unable to resolve the OID $OIDItem, either it doesn't exist, oid-info changed its site format, or oid-info is not visible"
+                    continue
                 }
             }
             
+            $progressPreference = "continue"
+            $erroractionpreference = "continue"
+            $oidScrapeResult = $oidDescriptionRegex.match($result)
+            $oidScrapeNameValue = $oidScrapeResult.groups["oidname"].value
+            if ($oidScrapeResult.success -and $oidScrapeNameValue) {
+                $newOIDResult = $oidScrapeNameValue
+            } else {
+                write-error "Couldn't analyze $OIDItem on oid-info.com. Maybe they changed their site format?"
+                continue
+            }
+        
+            
             if ($newOIDResult) {
                 [Switch]$SCRIPT:newOIDsFound = $true
-                $OIDCache."$OIDItem" = $newOIDResult
-                return $newOIDResult
+                
+                if ($OIDParentUsed) {
+                    $OIDCache."$OIDParent" = $newOIDResult
+                    return ($newOIDResult + $oidChild)
+                } else {
+                    $OIDCache."$OIDItem" = $newOIDResult
+                    return $newOIDResult
+                }
             }
         }}
 
