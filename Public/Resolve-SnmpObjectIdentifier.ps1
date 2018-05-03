@@ -17,7 +17,7 @@ function Resolve-SnmpObjectIdentifier {
         )
         begin {
             [uri]$oidinfouri = 'http://www.oid-info.com/get'
-            [regex]$oidDescriptionRegex = '<strong>Description</strong>:.+?<br>\ {12}"(.+?)\"\ {12}<br>'
+            [regex]$oidDescriptionRegex = '<strong><code>(?<oidname>\w+?)\((?<oidnum>\d+?)\)</code></strong>'
             if (test-path $CacheFilePath) {
                 $OIDCache = import-clixml $CacheFilePath
             } else {
@@ -35,13 +35,17 @@ function Resolve-SnmpObjectIdentifier {
             }
 
             #Check cache
-            $OIDCachedResult = $OIDCache."oidItem"
+            $OIDCachedResult = $OIDCache."$oidItem"
             if ($OIDCachedResult) {
                 return $OIDCachedResult
             } else {
+                #The write-progress in invoke-webrequest slows it down significantly
+                $progressPreference = "silentlycontinue"
                 $result = (invoke-webrequest @iwrParams -uri "$oidinfouri/$OIDItem").content -replace '\n'
-                if ($result -match $oidDescriptionRegex) {
-                    $newOIDResult = $matches[1] 
+                $progressPreference = "continue"
+                $oidScrapeResult = $oidDescriptionRegex.match($result)
+                if ($oidScrapeResult.success) {
+                    $newOIDResult = ($oidScrapeResult.groups | where name -eq oidname).value
                 } else {
                     write-error "Unable to resolve the OID $OIDItem, either it doesn't exist, oid-info changed its site format, or oid-info is not visible"
                 }
@@ -56,7 +60,7 @@ function Resolve-SnmpObjectIdentifier {
 
         end {
             if ($newOIDsFound) {
-                export-clixml -inputobject $OIDCache -path $OIDCachePath
+                export-clixml -inputobject $OIDCache -path $CacheFilePath
             }
         }
     }
