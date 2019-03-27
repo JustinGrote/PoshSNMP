@@ -1,3 +1,6 @@
+using Namespace Lextm.SharpSnmpLib
+using Namespace Lextm.SharpSnmpLib.Messaging
+
 function Invoke-SnmpGet {
 	<#
 	.SYNOPSIS
@@ -28,7 +31,7 @@ function Invoke-SnmpGet {
 
         #UDP Port to use to perform SNMP queries.
 		[Parameter(Mandatory=$False)]
-			[int]$UDPport = 161,
+			[int]$Port = 161,
 
         #Time to wait before expiring SNMP call handles.
         [Parameter(Mandatory=$False)]
@@ -39,22 +42,13 @@ function Invoke-SnmpGet {
 	)
 
     #Validate the ComputerName
-    $IPAddress = try {[System.Net.Dns]::GetHostAddresses($ComputerName)[0]} catch {throw}
+    $IPAddress = try {[Net.Dns]::GetHostAddresses($ComputerName)[0]} catch {throw}
 
     # Create endpoint for SNMP server
-	$TargetIPEndPoint = New-Object System.Net.IpEndPoint ($IPAddress, $UDPport)
+	$TargetIPEndPoint = New-Object System.Net.IpEndPoint ($IPAddress, $Port)
 
 	# Create a generic list to be the payload
-	if ($Host.Version.Major -le 2) {
-		# PowerShell v1 and v2
-		$DataPayload = New-GenericObject System.Collections.Generic.List Lextm.SharpSnmpLib.Variable
-	} elseif ($Host.Version.Major -gt 2) {
-		# PowerShell v3+
-		$DataPayload = New-Object 'System.Collections.Generic.List[Lextm.SharpSnmpLib.Variable]'
-	}
-
-	#$DataPayload = HelperCreateGenericList
-	# WHY DOESN'T THIS WORK?! this should replace the lines above; what is different?
+    $DataPayload = New-Object 'System.Collections.Generic.List[Lextm.SharpSnmpLib.Variable]'
 
 	# Convert each OID to the proper object type and add to the list
 	foreach ($OIDString in $ObjectIdentifier) {
@@ -63,11 +57,11 @@ function Invoke-SnmpGet {
 	}
 
 	# Use SNMP v2 by default
-	$SnmpVersion = [Lextm.SharpSnmpLib.VersionCode]::$Version
+	$SnmpVersion = [VersionCode]::$Version
 
 	# Perform SNMP Get
 	try {
-		$ReturnedSet = [Lextm.SharpSnmpLib.Messaging.Messenger]::Get(
+		[Messenger]::Get(
 			$SnmpVersion,
 			$TargetIPEndPoint, 
 			$Community,
@@ -81,19 +75,4 @@ function Invoke-SnmpGet {
 		write-error "SNMP Get error: $_"
         return $null
 	}
-
-    $returnedset
-
-	# clean up return data
-	<#
-    $Result = @()
-	foreach ($Entry in $ReturnedSet) {
-		$RecordLine = "" | Select OID, Data
-		$RecordLine.OID = $Entry.Id.ToString()
-		$RecordLine.Data = $Entry.Data.ToString()
-		$Result += $RecordLine
-	}
-    #>
-
-	#$Result
 }

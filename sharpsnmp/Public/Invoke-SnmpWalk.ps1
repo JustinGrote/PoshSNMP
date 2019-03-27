@@ -1,3 +1,5 @@
+using Namespace Lextm.SharpSnmpLib
+using Namespace Lextm.SharpSnmpLib.Messaging
 function Invoke-SnmpWalk  {
     Param (
         #The IP or hostname of the target device. Defaults to "localhost" if not specified
@@ -7,47 +9,41 @@ function Invoke-SnmpWalk  {
         [string]$Community = "public",
 
 		#SNMP OID(s) to query on the target device. For Invoke-SnmpGet, this can be a single OID (string value) or an array of OIDs (string values)
-        [Parameter(Mandatory=$True)]
-	    [string[]]$ObjectIdentifier,
+	    [ObjectIdentifier]$ObjectIdentifier,
 	
         #UDP Port to use to perform SNMP queries.
-		[Parameter(Mandatory=$False)]
-			[int]$UDPport = 161,
+		[int]$Port = 161,
+
+		#Which SNMP Version to use
+		[VersionCode]$Version = 'V2',
+
+		#SNMP Walk Mode
+		[WalkMode]$WalkMode = 'WithinSubTree',
 		
         #Time to wait before expiring SNMP call handles.	
-        [Parameter(Mandatory=$False)]
-			[int]$Timeout = 3000
+		[int]$Timeout = 3000
 	)
 
-	# $sOIDstart
-	# $TimeOut is in msec, 0 or -1 for infinite
-
-	# Create OID object
-	$oid = New-Object Lextm.SharpSnmpLib.ObjectIdentifier ($ObjectIdentifier)
-
-	# Create OID variable list
-	if ($Host.Version.Major -le 2) {
-		# PowerShell v1 and v2
-		$vList = New-GenericObject System.Collections.Generic.List Lextm.SharpSnmpLib.Variable
-	} elseif ($Host.Version.Major -gt 2) {
-		# PowerShell v3+
-		$vList = New-Object 'System.Collections.Generic.List[Lextm.SharpSnmpLib.Variable]'
-	}
+	$vList = [System.Collections.Generic.List[Lextm.SharpSnmpLib.Variable]]::New()
 
     #Validate the ComputerName
     $IPAddress = try {[System.Net.Dns]::GetHostAddresses($ComputerName)[0]} catch {throw}
 	
 	# Create endpoint for SNMP server
-	$svr = New-Object System.Net.IpEndPoint ($IPAddress, $UDPport)
-
-	# Use SNMP v2 and walk mode WithinSubTree (as opposed to Default)
-	$ver = [Lextm.SharpSnmpLib.VersionCode]::V2
-	$walkMode = [Lextm.SharpSnmpLib.Messaging.WalkMode]::WithinSubtree
+	$svr = New-Object System.Net.IpEndPoint ($IPAddress, $port)
 
 	# Perform SNMP Get
 	try {
-		[Lextm.SharpSnmpLib.Messaging.Messenger]::Walk($ver, $svr, $Community, $oid, $vList, $TimeOut, $walkMode) | Out-Null
-	} catch [Lextm.SharpSnmpLib.Messaging.TimeoutException] {
+		$numResults = [Messenger]::Walk(
+			$Version, 
+			$svr, 
+			$Community, 
+			$ObjectIdentifier, 
+			$vList, 
+			$TimeOut, 
+			$walkMode)
+		write-verbose "$numResults SNMP records returned"
+	} catch [Messaging.TimeoutException] {
 		write-error "SNMP Get on $ComputerName timed-out"
 		Return $null
 	} catch {

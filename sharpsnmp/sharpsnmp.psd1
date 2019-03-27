@@ -22,7 +22,10 @@ Copyright = '(c) 2019 Justin Grote. Fork of Original (c) 2016 Brian Addicks. All
 Description = 'SNMP cmdlets using the Sharp SNMP .NET Library'
 
 # Minimum version of the Windows PowerShell engine required by this module
-PowerShellVersion = '3.0'
+PowerShellVersion = '5.1'
+
+# Supported PSEditions
+CompatiblePSEditions = 'Desktop', 'Core'
 
 # Name of the Windows PowerShell host required by this module
 # PowerShellHostName = ''
