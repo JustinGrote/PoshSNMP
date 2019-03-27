@@ -13,10 +13,10 @@ ModuleVersion = '0.0.1'
 GUID = 'fc63d40e-9c36-4067-a107-e68ae9d5ae33'
 
 # Author of this module
-Author = 'Brian Addicks'
+Author = 'Justin Grote'
 
 # Copyright statement for this module
-Copyright = '(c) 2016 Brian Addicks. All rights Reserved.'
+Copyright = '(c) 2019 Justin Grote. Fork of Original (c) 2016 Brian Addicks. All rights Reserved.'
 
 # Description of the functionality provided by this module
 Description = 'SNMP cmdlets using the Sharp SNMP .NET Library'
@@ -82,7 +82,7 @@ AliasesToExport = '*'
 PrivateData = @{
 
     PSData = @{
-
+	PreRelease = 'BuiltFromSource'
         # Tags applied to this module. These help with module discovery in online galleries.
         # Tags = @()
 

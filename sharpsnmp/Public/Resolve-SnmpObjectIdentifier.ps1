@@ -85,7 +85,6 @@ function Resolve-SnmpObjectIdentifier {
                 write-error "Couldn't analyze $OIDItem on oid-info.com. Maybe they changed their site format?"
                 continue
             }
-        
             
             if ($newOIDResult) {
                 [Switch]$SCRIPT:newOIDsFound = $true
