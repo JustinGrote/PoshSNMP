@@ -1,10 +1,10 @@
-# Module manifest for module 'SNMPSharp'
+# Module manifest for module 'PoshSNMP'
 
 
 @{
 
 # Script module or binary module file associated with this manifest.
-RootModule = 'sharpsnmp.psm1'
+RootModule = 'poshsnmp.psm1'
 
 # Version number of this module.
 ModuleVersion = '0.0.1'
@@ -90,13 +90,13 @@ PrivateData = @{
         # Tags = @()
 
         # A URL to the license for this module.
-        # LicenseUri = ''
+        LicenseUri = 'https://github.com/JustinGrote/PoshSNMP/blob/master/LICENSE'
 
         # A URL to the main website for this project.
-        # ProjectUri = ''
+        ProjectUri = 'https://github.com/JustinGrote/PoshSNMP'
 
         # A URL to an icon representing this module.
-        # IconUri = ''
+        IconUri = 'https://raw.githubusercontent.com/JustinGrote/PoshSNMP/master/images/PoshSNMP.png'
 
         # ReleaseNotes of this module
         # ReleaseNotes = ''
