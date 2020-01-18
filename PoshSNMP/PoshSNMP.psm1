@@ -6,7 +6,7 @@ if ($psEdition -ne 'Core') {
 
 $AssembliesToLoad = @()
 foreach ($dotNetTargetItem in $dotNetTarget) {
-    $AssembliesToLoad += Get-ChildItem -Path "$PSScriptRoot\lib\$dotNetTargetItem" -include "*.dll" -ErrorAction SilentlyContinue
+    $AssembliesToLoad += Get-ChildItem -Path "$PSScriptRoot\lib\$dotNetTargetItem" -Filter "*.dll" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
 }
 
 if ($AssembliesToLoad) {
@@ -25,9 +25,14 @@ if ($AssembliesToLoad) {
         $AssembliesToLoad = $TempAssembliesToLoad
     }
 
-    # $assembliestoLoad | Foreach-Object {
-    #     [Reflection.Assembly]::LoadFile($AssembliesToLoad)
-    # }
+    #Load the specified assemblies if not loaded already
+    #Checks based on full path of assemblies, doesn't check for version or assembly target.
+    $AssembliesToLoad | Foreach-Object {
+        if ($_ -notin ([System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object Location | Select-Object -ExpandProperty Location)) {
+            [Reflection.Assembly]::LoadFile($_)
+        }
+        
+    }
 }
 
 #Dot source the files
