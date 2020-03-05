@@ -1,4 +1,6 @@
-
+using namespace System.Net
+using namespace Lextm.SharpSnmpLib
+using namespace Lextm.SharpSnmpLib.Messaging
 function Invoke-SnmpSet {
 	<#
 	.SYNOPSIS
@@ -51,50 +53,49 @@ function Invoke-SnmpSet {
 	)
 
     #Validate the ComputerName
-    $IPAddress = try {[System.Net.Dns]::GetHostAddresses($ComputerName)[0]} catch {throw}
+    $IPAddress = try {[Dns]::GetHostAddresses($ComputerName)[0]} catch {throw}
 	
 	# Create endpoint for SNMP server
-	$TargetIPEndPoint = New-Object System.Net.IpEndPoint ($IPAddress, $UDPport)
+	$TargetIPEndPoint = [IpEndPoint]::new($IPAddress, $UDPport)
 
 	# Create a generic list to be the payload
-	$DataPayload = HelperCreateGenericList
+	# $DataPayload = HelperCreateGenericList
 	
 	# Convert each OID to the proper object type and add to the list
 	<# foreach ($OIDString in $ObjectIdentifiers) {
-		$OIDObject = New-Object Lextm.SharpSnmpLib.ObjectIdentifier ($OIDString)
+		$OIDObject = [ObjectIdentifier ($OIDString)
 		$DataPayload.Add($OIDObject)
 	} #>
 	
 	# this is where the foreach would begin
 	
-	$ThisOID = New-Object Lextm.SharpSnmpLib.ObjectIdentifier $ObjectIdentifier
+	$ThisOID = [ObjectIdentifier]::new($ObjectIdentifier)
 	
 	switch ($DataType) {
-		"i" { $ThisData = New-Object Lextm.SharpSnmpLib.Integer32 ([int] $OIDValue) }
-		"u" { $ThisData = New-Object Lextm.SharpSnmpLib.Gauge32	 ([uint32] $OIDValue) }
-		"t" { $ThisData = New-Object Lextm.SharpSnmpLib.TimeTicks ([uint32] $OIDValue) }
-		"a" { $ThisData = New-Object Lextm.SharpSnmpLib.IP ([Net.IPAddress]::Parse($OIDValue)) }
-		"o" { $ThisData = New-Object Lextm.SharpSnmpLib.ObjectIdentifier ($OIDValue) }
-		"s" { $ThisData = New-Object Lextm.SharpSnmpLib.OctetString ($OIDValue) }
-		"x" { $ThisData = New-Object Lextm.SharpSnmpLib.OctetString ([Lextm.SharpSnmpLib.ByteTool]::Convert($OIDValue)) }
-		"d" { $ThisData = New-Object Lextm.SharpSnmpLib.OctetString ([Lextm.SharpSnmpLib.ByteTool]::ConvertDecimal($OIDValue)) } # not sure about this one actually working...
-		"n" { $ThisData = New-Object Lextm.SharpSnmpLib.Null }
+		"i" { $ThisData = [Integer32]::new([int] $OIDValue) }
+		"u" { $ThisData = [Gauge32]::new([uint32] $OIDValue) }
+		"t" { $ThisData = [TimeTicks]::new([uint32] $OIDValue) }
+		"a" { $ThisData = [IP]::new(([IPAddress]::Parse($OIDValue))) }
+		"o" { $ThisData = [ObjectIdentifier]::new($OIDValue) }
+		"s" { $ThisData = [OctetString]::new($OIDValue) }
+		"x" { $ThisData = [OctetString]::new([ByteTool]::Convert($OIDValue)) }
+		"d" { $ThisData = [OctetString]::new([ByteTool]::ConvertDecimal($OIDValue)) } # not sure about this one actually working...
+		"n" { $ThisData = [Null]::new() }
 		# default { }
 	}
 	
-	$OIDObject = New-Object Lextm.SharpSnmpLib.Variable ($ThisOID, $ThisData)
+	$OIDObject = [Variable]::new($ThisOID, $ThisData)
 	
 	# this is where the foreach would end
 	
-	$DataPayload.Add($OIDObject)
-	
+	# $DataPayload.Add($OIDObject)
 
 	# Use SNMP v2
-	$SnmpVersion = [Lextm.SharpSnmpLib.VersionCode]::V2
+	$SnmpVersion = [VersionCode]::V2
 
 	# Perform SNMP Get
 	try {
-		$ReturnedSet = [Lextm.SharpSnmpLib.Messaging.Messenger]::Set($SnmpVersion, $TargetIPEndPoint, $Community, $DataPayload, $Timeout)
+		$ReturnedSet = [Messenger]::Set($SnmpVersion, $TargetIPEndPoint, $Community, $DataPayload, $Timeout)
 	} catch {
 	
 		# can we handle this more gracefully?

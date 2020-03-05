@@ -1,3 +1,4 @@
+using Namespace System.Collections.Generic
 using Namespace Lextm.SharpSnmpLib
 using Namespace Lextm.SharpSnmpLib.Messaging
 function Invoke-SnmpWalk  {
@@ -24,10 +25,10 @@ function Invoke-SnmpWalk  {
 		[int]$Timeout = 3000
 	)
 
-	$vList = [System.Collections.Generic.List[Lextm.SharpSnmpLib.Variable]]::New()
+	$vList = [List[Variable]]::New()
 
     #Validate the ComputerName
-    $IPAddress = try {[System.Net.Dns]::GetHostAddresses($ComputerName)[0]} catch {throw}
+    $IPAddress = try {[Net.Dns]::GetHostAddresses($ComputerName)[0]} catch {throw}
 	
 	# Create endpoint for SNMP server
 	$svr = New-Object System.Net.IpEndPoint ($IPAddress, $port)
@@ -43,7 +44,7 @@ function Invoke-SnmpWalk  {
 			$TimeOut, 
 			$walkMode)
 		write-verbose "$numResults SNMP records returned"
-	} catch [Messaging.TimeoutException] {
+	} catch [TimeoutException] {
 		write-error "SNMP Get on $ComputerName timed-out"
 		Return $null
 	} catch {

@@ -7,7 +7,7 @@
 RootModule = 'poshsnmp.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.0.1'
+ModuleVersion = '0.2.2'
 
 # ID used to uniquely identify this module
 GUID = 'fc63d40e-9c36-4067-a107-e68ae9d5ae33'
@@ -85,7 +85,7 @@ AliasesToExport = '*'
 PrivateData = @{
 
     PSData = @{
-	PreRelease = 'BuiltFromSource'
+	#PreRelease = 'BuiltFromSource'
         # Tags applied to this module. These help with module discovery in online galleries.
         # Tags = @()
 

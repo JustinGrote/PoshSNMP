@@ -52,7 +52,7 @@ function Invoke-SnmpGet {
 
 	# Convert each OID to the proper object type and add to the list
 	foreach ($OIDString in $ObjectIdentifier) {
-		$OIDObject = New-Object Lextm.SharpSnmpLib.ObjectIdentifier ($OIDString)
+		$OIDObject = [ObjectIdentifier]::new($OIDString)
 		$DataPayload.Add($OIDObject)
 	}
 
@@ -68,7 +68,7 @@ function Invoke-SnmpGet {
 			$DataPayload,
 			$Timeout
 		)
-	} catch [Lextm.SharpSnmpLib.Messaging.TimeoutException] {
+	} catch [TimeoutException] {
 		write-error "SNMP Get on $ComputerName timed-out"
         return $null
 	} catch {
